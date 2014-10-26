@@ -87,7 +87,11 @@ class Redis {
 	 * @see pipeline
 	 * @access public
 	 */
-	function uncork() {
+	function uncork($skip_adding_exec = false) {
+                if ( !$skip_adding_exec ){
+                    array_unshift($this->queue, $this->commandFromArray(array('MULTI')));
+                    $this->queue[] = $this->commandFromArray(array('EXEC'));
+                }
 		/* Open a Redis connection and execute the queued commands */
 		foreach ($this->queue as $command) {
 			for ($written = 0; $written < strlen($command); $written += $fwrite) {
@@ -116,20 +120,23 @@ class Redis {
 
 	function __call($name, $args) {
 		/* Build the Redis unified protocol command */
-		$crlf = "\r\n";
-		array_unshift($args, strtoupper($name));
-		$command = '*' . count($args) . $crlf;
-		foreach ($args as $arg) {
-			$command .= '$' . strlen($arg) . $crlf . $arg . $crlf;
-		}
-
-		/* Add it to the pipeline queue */
-		$this->queue[] = $command;
+                array_unshift($args, strtoupper($name));
+                $command = $this->commandFromArray($args);
 
 		if ($this->pipelined) {
+
+//                        $this->queue[] = $this->commandFromArray(array('MULTI'));
+                        /* Add it to the pipeline queue */
+                        $this->queue[] = $command;
+
+                    
 			return $this;
 		} else {
-			return $this->uncork();
+                        /* Add it to the pipeline queue */
+                        $this->queue[] = $command;
+
+                    
+			return $this->uncork($skip_adding_EXEC = true);
 		}
 	}
 
@@ -192,5 +199,16 @@ class Redis {
 		/* Party on */
 		return $response;
 	}
+        
+        
+        private function commandFromArray(array $args) {
+            $crlf = "\r\n";
+            $command = '*' . count($args) . $crlf;
+            foreach ($args as $arg) {
+                    $command .= '$' . strlen($arg) . $crlf . $arg . $crlf;
+            }
+            return $command;
+
+        }
 
 }
