@@ -20,7 +20,7 @@ class RedisException extends \Exception {
  */
 class Redis {
 	/**
-	 * Socket connection to the Redis server
+	 * Socket connection to Redis server
 	 * @var resource
 	 * @access private
 	 */
